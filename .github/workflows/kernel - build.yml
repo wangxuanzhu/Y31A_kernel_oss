@@ -6,7 +6,7 @@ on:
       - main # 根据实际分支调整
 
 jobs:
-  build - kernel:
+  build-kernel:
     runs-on: ubuntu - latest
     steps:
       - name: Cache apt packages
