@@ -1,5 +1,6 @@
 name: Linux Kernel Build for Y31A ARM
 on:
+  workflow_dispatch: {}
   push:
     branches:
       - main # 根据实际分支调整
