@@ -1,0 +1,40 @@
+name: Linux Kernel Build for Y31A ARM
+on:
+  push:
+    branches:
+      - main # 根据实际分支调整
+
+jobs:
+  build - kernel:
+    runs - on: ubuntu - latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up build environment for ARM
+        run: |
+          sudo apt - get update
+          sudo apt - get install - y build - essential bc flex bison libssl - dev libelf - dev device - tree - gcc - arm - linux - gnueabi
+      - name: Configure for ARM architecture
+        run: |
+          make ARCH=arm O=out ARCH=arm CROSS_COMPILE=arm - linux - gnueabi - vivo_y31a_defconfig
+      - name: Build Linux kernel for ARM
+        run: |
+          make ARCH=arm O=out ARCH=arm CROSS_COMPILE=arm - linux - gnueabi - -j$(nproc)
+      - name: Extract firmware
+        run: |
+          mkdir -p extracted_firmware
+          # 根据该内核仓库结构，查找panel、wifi、modem固件位置并调整路径
+          # 示例假设，需根据实际调整
+          find. -name "*panel*firmware*" -exec cp -r {} extracted_firmware/panel \;
+          find. -name "*wifi*firmware*" -exec cp -r {} extracted_firmware/wifi \;
+          find. -name "*modem*firmware*" -exec cp -r {} extracted_firmware/modem \;
+      - name: Create Release
+        uses: softprops/action - github - release@v1
+        with:
+          files: |
+            extracted_firmware/**
+          tag_name: ${{ github.sha }}
+          release_name: Y31A Linux Kernel Firmware Release for ARM
+          body: Release of panel, wifi, and modem firmware from Y31A Linux kernel build for ARM
+          draft: false
+          prerelease: false
