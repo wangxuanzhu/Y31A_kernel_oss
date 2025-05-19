@@ -6,8 +6,8 @@ on:
       - main # 根据实际分支调整
 
 jobs:
-  build_kernel:
-    runs - on: ubuntu - 22.04
+  build-kernel:
+    runs-on: ubuntu - 22.04
     steps:
       - name: Cache apt packages
         id: cache_apt_packages
