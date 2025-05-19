@@ -6,11 +6,11 @@ on:
       - main # 根据实际分支调整
 
 jobs:
-  build-kernel:
-    runs-on: ubuntu - 22.04
+  build_kernel:
+    runs - on: ubuntu - 22.04
     steps:
       - name: Cache apt packages
-        id: apt - cache
+        id: cache_apt_packages
         uses: actions/cache@v3
         with:
           path: /home/runner/.cache/apt
@@ -18,7 +18,7 @@ jobs:
           restore - keys: |
             ${{ runner.os }} - apt -
       - name: Cache build output
-        id: build - output - cache
+        id: cache_build_output
         uses: actions/cache@v3
         with:
           path: out
@@ -28,7 +28,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set up build environment for ARM
-        if: steps.apt - cache.outputs.cache - hit!= 'true'
+        if: steps.cache_apt_packages.outputs.cache - hit!= 'true'
         run: |
           sudo apt - get update
           sudo apt - get install - y build - essential bc flex bison libssl - dev libelf - dev device - tree - gcc - arm - linux - gnueabi
@@ -42,7 +42,7 @@ jobs:
             exit 1
           fi
       - name: Build Linux kernel for ARM
-        if: steps.build - output - cache.outputs.cache - hit!= 'true'
+        if: steps.cache_build_output.outputs.cache - hit!= 'true'
         run: |
           make ARCH=arm O=out ARCH=arm CROSS_COMPILE=arm - linux - gnueabi - -j$(nproc) &> build.log
       - name: Check kernel build status
