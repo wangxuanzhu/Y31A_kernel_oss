@@ -8,6 +8,13 @@ jobs:
   build - kernel:
     runs - on: ubuntu - latest
     steps:
+      - name: Cache apt packages
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/.cache/apt
+          key: ${{ runner.os }} - apt - ${{ hashFiles('**/requirements.txt') }}
+          restore - keys: |
+            ${{ runner.os }} - apt -
       - name: Checkout
         uses: actions/checkout@v2
       - name: Set up build environment for ARM
@@ -17,17 +24,36 @@ jobs:
       - name: Configure for ARM architecture
         run: |
           make ARCH=arm O=out ARCH=arm CROSS_COMPILE=arm - linux - gnueabi - vivo_y31a_defconfig
+      - name: Check config status
+        run: |
+          if [ $? -ne 0 ]; then
+            echo "Kernel configuration failed"
+            exit 1
+          fi
       - name: Build Linux kernel for ARM
         run: |
-          make ARCH=arm O=out ARCH=arm CROSS_COMPILE=arm - linux - gnueabi - -j$(nproc)
+          make ARCH=arm O=out ARCH=arm CROSS_COMPILE=arm - linux - gnueabi - -j$(nproc) &> build.log
+      - name: Check kernel build status
+        run: |
+          if [ $? -ne 0 ]; then
+            echo "Kernel build failed"
+            exit 1
+          fi
       - name: Extract firmware
         run: |
           mkdir -p extracted_firmware
-          # 根据该内核仓库结构，查找panel、wifi、modem固件位置并调整路径
-          # 示例假设，需根据实际调整
           find. -name "*panel*firmware*" -exec cp -r {} extracted_firmware/panel \;
           find. -name "*wifi*firmware*" -exec cp -r {} extracted_firmware/wifi \;
           find. -name "*modem*firmware*" -exec cp -r {} extracted_firmware/modem \;
+      - name: Check firmware extraction status
+        run: |
+          if [ $? -ne 0 ]; then
+            echo "Firmware extraction failed"
+            exit 1
+          fi
+      - name: Output kernel image path
+        run: |
+          echo "Compiled kernel image path: out/arch/arm/boot/zImage"
       - name: Create Release
         uses: softprops/action - github - release@v1
         with:
