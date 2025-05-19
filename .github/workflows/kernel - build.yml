@@ -7,18 +7,28 @@ on:
 
 jobs:
   build-kernel:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu - 22.04
     steps:
       - name: Cache apt packages
+        id: apt - cache
         uses: actions/cache@v3
         with:
           path: /home/runner/.cache/apt
           key: ${{ runner.os }} - apt - ${{ hashFiles('**/requirements.txt') }}
           restore - keys: |
             ${{ runner.os }} - apt -
+      - name: Cache build output
+        id: build - output - cache
+        uses: actions/cache@v3
+        with:
+          path: out
+          key: ${{ runner.os }} - kernel - build - ${{ hashFiles('**/*.c', '**/*.h', '.config') }}
+          restore - keys: |
+            ${{ runner.os }} - kernel - build -
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set up build environment for ARM
+        if: steps.apt - cache.outputs.cache - hit!= 'true'
         run: |
           sudo apt - get update
           sudo apt - get install - y build - essential bc flex bison libssl - dev libelf - dev device - tree - gcc - arm - linux - gnueabi
@@ -32,6 +42,7 @@ jobs:
             exit 1
           fi
       - name: Build Linux kernel for ARM
+        if: steps.build - output - cache.outputs.cache - hit!= 'true'
         run: |
           make ARCH=arm O=out ARCH=arm CROSS_COMPILE=arm - linux - gnueabi - -j$(nproc) &> build.log
       - name: Check kernel build status
@@ -55,8 +66,18 @@ jobs:
       - name: Output kernel image path
         run: |
           echo "Compiled kernel image path: out/arch/arm/boot/zImage"
+      - name: Upload build log as artifact
+        uses: actions/upload - artifact@v3
+        with:
+          name: build - log
+          path: build.log
+      - name: Upload build output as artifact
+        uses: actions/upload - artifact@v3
+        with:
+          name: build - output
+          path: out
       - name: Create Release
-        uses: softprops/action - github - release@v1
+        uses: softprops/action - github - release@v4
         with:
           files: |
             extracted_firmware/**
@@ -65,3 +86,11 @@ jobs:
           body: Release of panel, wifi, and modem firmware from Y31A Linux kernel build for ARM
           draft: false
           prerelease: false
+      - name: Send Slack notification on failure
+        if: failure()
+        uses: peter - evans/slack - notification@v1.3.0
+        with:
+          token: ${{ secrets.SLACK_TOKEN }}
+          channel: '#your - channel'
+          title: 'Y31A Kernel Build Failed'
+          message: 'The Y31A kernel build workflow has failed. Check the workflow logs for details.'
